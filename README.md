@@ -1,62 +1,69 @@
 # Ticketlink Macro
 
-티켓링크(ticketlink.co.kr) 실서비스 예매 자동화 매크로.  
-CDP Stealth Chromium 기반으로 EverSafe(에버세이프) 및 NHN ACE 봇탐지 우회.
+티켓링크(ticketlink.co.kr) 실서비스 예매 자동화 매크로 — 원클릭 실행.
 
-## Features
+## 특징
 
-- **스나이퍼 모드**: 지정 시간 정각에 초고속 예매 시도 (최대 300회/초 폴링)
-- **취소표 모드**: 취소표(취켓팅) 발생 시 자동 예매
-- **분석 모드**: 상품 페이지 구조, 로그인 플로우, API 엔드포인트 분석
-- **CDP 기반**: 실제 Chromium 브라우저에 연결하여 탐지 우회
+- **자체 Chromium 엔진 내장** — Python + `pip install playwright`만 있으면 바로 실행
+- **모바일 에뮬레이션** — m.ticketlink.co.kr 사용, EverSafe(에버세이프) / NHN ACE 봇탐지 우회
+- **초고속 스나이퍼** — 정각 예매, T-3초부터 서브초 폴링 (최대 300회)
+- **취소표 모니터링** — 취켓팅 자동 감지
+- **분석 모드** — 페이지 구조/API 분석
 
-## Architecture
-
-```
-ticketlink.co.kr (Frontend)
-    ├── mapi.ticketlink.co.kr (API Server) — 암호화된 쿼리 파라미터 사용
-    ├── oc.ticketlink.co.kr (Order/Checkout)
-    ├── id.payco.com (PAYCO OAuth 로그인)
-    └── EverSafe (에버스핀) + NHN ACE 봇탐지
-```
-
-## Setup
+## 설치
 
 ```bash
-# 1. Stealth Chromium 실행 (CDP on port 9222)
-./start_stealth_chromium.sh
-
-# 2. Python venv
-python3 -m venv venv && source venv/bin/activate
-pip install playwright && python -m playwright install chromium
-
-# 3. 환경변수
-export TL_PRODUCT_ID=63681       # 상품 ID
-export TL_TARGET_EPOCH=1781694000 # 타겟 시간 (Unix epoch)
-export TL_MODE=snipe              # snipe | cancel | analyze
+pip install playwright
+playwright install chromium
 ```
 
-## Usage
+또는 그냥 실행 (자동 설치):
 
 ```bash
-# 스나이퍼 모드 (정각 예매)
-TL_PRODUCT_ID=63681 TL_TARGET_EPOCH=1781694000 python ticketlink_sniper.py
-
-# 취소표 모니터링
-TL_MODE=cancel TL_PRODUCT_ID=63681 python ticketlink_sniper.py
-
-# 분석 모드
-python ticketlink_macro_v3.py --mode analyze --product-id 63681
-
-# 네트워크 API 분석
-python ticketlink_macro_v3.py --mode network --product-id 63681
+python ticketlink_macro.py --mode analyze --product-id 63811
 ```
 
-## Security Bypass
+## 사용법
 
-- **EverSafe**: CDP 연결 + 실제 브라우저 프로필 + extension 기반 stealth
-- **NHN ACE**: `navigator.webdriver` 패치, `chrome.runtime` 위조, WebGL 스푸핑
-- **API 암호화**: 브라우저 컨텍스트 내에서만 유효한 토큰 → API 직접 호출 불가, 브라우저 자동화만 가능
+```bash
+# 예매 스나이핑 (정각 예매)
+python ticketlink_macro.py -p 63681 -t "2026-06-17 20:00:00"
+
+# Unix epoch 사용
+python ticketlink_macro.py -p 63681 --target-epoch 1781694000
+
+# 취소표 모니터링 (10분)
+python ticketlink_macro.py -m cancel -p 63681
+
+# 페이지 분석
+python ticketlink_macro.py -m analyze -p 63811
+
+# PC 버전 사용 (기본값은 모바일)
+python ticketlink_macro.py -p 63681 -t "..." --pc
+
+# 디버깅 (headful)
+python ticketlink_macro.py -p 63811 -m analyze --no-headless
+```
+
+## 우회 기술
+
+| 방어 체계 | 우회 방법 |
+|-----------|----------|
+| EverSafe (에버스핀) | 모바일 에뮬레이션 + 실제 WebKit UA |
+| NHN ACE (aceat.js) | navigator.webdriver 패치, chrome.runtime 위조, permissions 스푸핑 |
+| 클린예매 CAPTCHA | 수동 입력 필요 (보안문자) |
+| API 암호화 (mapi) | 브라우저 컨텍스트 내 실행으로 우회 |
+
+## 실제 예매 플로우
+
+```
+1. 공연 페이지 로드 → "판매예정" → 오픈 시 "예매하기"로 변경
+2. 클린예매 인증 (보안문자 입력)
+3. 날짜/회차 선택
+4. 좌석 선택
+5. 할인/결제 수단 선택
+6. 결제 완료
+```
 
 ## License
 
